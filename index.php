@@ -35,7 +35,7 @@ $belum_lunas = $total_siswa - $lunas;
         </div>
     </div>
     
-    <div class="text-end mt-5">
+    <div class="text-center mt-5">
         <h5 class="fw-bold text-secondary">APLIKASI PEMBAYARAN SPP SEKOLAH</h5>
     </div>
 </div>

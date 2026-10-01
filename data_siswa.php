@@ -2,80 +2,82 @@
 include 'header.php'; 
 include 'sidebar.php'; 
 
-// 1. Tambah Siswa
+// 1. PROSES TAMBAH SISWA
 if (isset($_POST['tambah'])) {
-    $nisn = $_POST['nisn'];
-    $nis = $_POST['nis'];
-    $nama = $_POST['nama'];
-    $id_kelas = $_POST['id_kelas'];
-    $alamat = $_POST['alamat'];
-    $no_telp = $_POST['no_telp'];
-    $id_spp = $_POST['id_spp'];
+    $nisn     = mysqli_real_escape_string($koneksi, trim($_POST['nisn']));
+    $nis      = mysqli_real_escape_string($koneksi, trim($_POST['nis']));
+    $nama     = mysqli_real_escape_string($koneksi, trim($_POST['nama']));
+    $id_kelas = mysqli_real_escape_string($koneksi, $_POST['id_kelas']);
+    $alamat   = mysqli_real_escape_string($koneksi, trim($_POST['alamat']));
+    $no_telp  = mysqli_real_escape_string($koneksi, trim($_POST['no_telp']));
+    $id_spp   = mysqli_real_escape_string($koneksi, $_POST['id_spp']);
 
-    $query = mysqli_query($koneksi, "INSERT INTO siswa VALUES ('$nisn', '$nis', '$nama', '$id_kelas', '$alamat', '$no_telp', '$id_spp')");
-    if ($query) {
-        echo "<script>alert('Data siswa berhasil ditambahkan!'); location.href='data_siswa.php';</script>";
+    // Cek apakah NISN atau NIS sudah dipakai siswa lain
+    $cek_duplikat = mysqli_query($koneksi, "SELECT * FROM siswa WHERE nisn = '$nisn' OR nis = '$nis'");
+    
+    if (mysqli_num_rows($cek_duplikat) > 0) {
+        $d_ada = mysqli_fetch_array($cek_duplikat);
+        if ($d_ada['nisn'] == $nisn) {
+            echo "<script>alert('Gagal! NISN \"$nisn\" sudah terdaftar untuk siswa lain.'); window.history.back();</script>";
+        } else {
+            echo "<script>alert('Gagal! NIS \"$nis\" sudah digunakan oleh siswa \"".$d_ada['nama']."\".'); window.history.back();</script>";
+        }
     } else {
-        echo "<script>alert('Gagal menambah data: " . mysqli_error($koneksi) . "');</script>";
+        $simpan = mysqli_query($koneksi, "INSERT INTO siswa (nisn, nis, nama, id_kelas, alamat, no_telp, id_spp) VALUES ('$nisn', '$nis', '$nama', '$id_kelas', '$alamat', '$no_telp', '$id_spp')");
+        
+        if ($simpan) {
+            echo "<script>alert('Data siswa berhasil ditambahkan!'); location.href='data_siswa.php';</script>";
+        } else {
+            echo "<script>alert('Gagal menyimpan data: " . mysqli_error($koneksi) . "');</script>";
+        }
     }
 }
 
-// 2. Edit Siswa (Proses UPDATE)
+// 2. PROSES EDIT SISWA
 if (isset($_POST['edit'])) {
-    $nisn = $_POST['nisn'];
-    $nis = $_POST['nis'];
-    $nama = $_POST['nama'];
-    $id_kelas = $_POST['id_kelas'];
-    $alamat = $_POST['alamat'];
-    $no_telp = $_POST['no_telp'];
-    $id_spp = $_POST['id_spp'];
+    $nisn     = mysqli_real_escape_string($koneksi, trim($_POST['nisn']));
+    $nis      = mysqli_real_escape_string($koneksi, trim($_POST['nis']));
+    $nama     = mysqli_real_escape_string($koneksi, trim($_POST['nama']));
+    $id_kelas = mysqli_real_escape_string($koneksi, $_POST['id_kelas']);
+    $alamat   = mysqli_real_escape_string($koneksi, trim($_POST['alamat']));
+    $no_telp  = mysqli_real_escape_string($koneksi, trim($_POST['no_telp']));
+    $id_spp   = mysqli_real_escape_string($koneksi, $_POST['id_spp']);
 
-    $query = mysqli_query($koneksi, "UPDATE siswa SET 
-        nis='$nis', 
-        nama='$nama', 
-        id_kelas='$id_kelas', 
-        alamat='$alamat', 
-        no_telp='$no_telp', 
-        id_spp='$id_spp' 
-        WHERE nisn='$nisn'");
+    // Cek apakah NIS sudah dipakai oleh siswa LAIN (selain NISN ini)
+    $cek_nis_lain = mysqli_query($koneksi, "SELECT * FROM siswa WHERE nis = '$nis' AND nisn != '$nisn'");
 
-    if ($query) {
-        echo "<script>alert('Data siswa berhasil diperbarui!'); location.href='data_siswa.php';</script>";
+    if (mysqli_num_rows($cek_nis_lain) > 0) {
+        $d_ada = mysqli_fetch_array($cek_nis_lain);
+        echo "<script>alert('Gagal! NIS \"$nis\" sudah digunakan oleh siswa \"".$d_ada['nama']."\".'); window.history.back();</script>";
     } else {
-        echo "<script>alert('Gagal memperbarui data: " . mysqli_error($koneksi) . "');</script>";
+        $update = mysqli_query($koneksi, "UPDATE siswa SET nis='$nis', nama='$nama', id_kelas='$id_kelas', alamat='$alamat', no_telp='$no_telp', id_spp='$id_spp' WHERE nisn='$nisn'");
+
+        if ($update) {
+            echo "<script>alert('Data siswa berhasil diperbarui!'); location.href='data_siswa.php';</script>";
+        } else {
+            echo "<script>alert('Gagal memperbarui data: " . mysqli_error($koneksi) . "');</script>";
+        }
     }
 }
 
-// 3. Hapus Siswa
+// 3. PROSES HAPUS SISWA
 if (isset($_GET['hapus'])) {
-    $nisn = $_GET['hapus'];
-    $query = mysqli_query($koneksi, "DELETE FROM siswa WHERE nisn='$nisn'");
-    if ($query) {
+    $nisn = mysqli_real_escape_string($koneksi, $_GET['hapus']);
+    $hapus = mysqli_query($koneksi, "DELETE FROM siswa WHERE nisn='$nisn'");
+
+    if ($hapus) {
         echo "<script>alert('Data siswa berhasil dihapus!'); location.href='data_siswa.php';</script>";
     } else {
-        echo "<script>alert('Gagal menghapus data: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal menghapus data: " . mysqli_error($koneksi) . "'); location.href='data_siswa.php';</script>";
     }
 }
 
-// Fetch Master Kelas & SPP untuk Dropdown Modal
-$list_kelas = [];
-$q_k = mysqli_query($koneksi, "SELECT * FROM kelas");
-while ($k = mysqli_fetch_array($q_k)) {
-    $list_kelas[] = $k;
-}
-
-$list_spp = [];
-$q_s = mysqli_query($koneksi, "SELECT * FROM spp");
-while ($s = mysqli_fetch_array($q_s)) {
-    $list_spp[] = $s;
-}
-
-// Fetch Data Siswa ke Array
+// Fetch Data Siswa
 $data_siswa = [];
-$query = mysqli_query($koneksi, "SELECT siswa.*, kelas.nama_kelas, spp.nominal, spp.tahun 
-                                 FROM siswa 
-                                 JOIN kelas ON siswa.id_kelas = kelas.id_kelas 
-                                 JOIN spp ON siswa.id_spp = spp.id_spp");
+$query = mysqli_query($koneksi, "SELECT s.*, k.nama_kelas, sp.nominal FROM siswa s 
+                                 JOIN kelas k ON s.id_kelas = k.id_kelas 
+                                 JOIN spp sp ON s.id_spp = sp.id_spp 
+                                 ORDER BY s.nama ASC");
 while ($row = mysqli_fetch_array($query)) {
     $data_siswa[] = $row;
 }
@@ -85,7 +87,7 @@ while ($row = mysqli_fetch_array($query)) {
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="m-0">Data Siswa</h4>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTambahSiswa">
-            <i class="bi bi-plus-circle me-1"></i>Tambah Siswa
+            <i class="bi bi-plus-circle me-1"></i> Tambah Siswa
         </button>
     </div>
 
@@ -93,94 +95,167 @@ while ($row = mysqli_fetch_array($query)) {
         <table class="table table-bordered table-striped align-middle m-0">
             <thead class="table-secondary">
                 <tr>
+                    <th style="width: 40px;">No</th>
                     <th>NISN</th>
                     <th>NIS</th>
                     <th>Nama</th>
                     <th>Kelas</th>
-                    <th>SPP</th>
                     <th>Alamat</th>
                     <th>No. Telp</th>
+                    <th>SPP</th>
                     <th class="text-center" style="width: 100px;">Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($data_siswa as $d) { ?>
-                <tr>
-                    <td><?= $d['nisn']; ?></td>
-                    <td><?= $d['nis']; ?></td>
-                    <td><?= $d['nama']; ?></td>
-                    <td><?= $d['nama_kelas']; ?></td>
-                    <td>Rp <?= number_format($d['nominal'], 0, ',', '.'); ?></td>
-                    <td><?= $d['alamat']; ?></td>
-                    <td><?= $d['no_telp']; ?></td>
-                    <td class="text-center text-nowrap">
-                        <!-- Tombol Edit Ringkas -->
-                        <button class="btn btn-warning btn-sm p-1 px-2" data-bs-toggle="modal" data-bs-target="#modalEditSiswa<?= $d['nisn']; ?>" title="Edit">
-                            <i class="bi bi-pencil-square"></i>
-                        </button>
-                        <!-- Tombol Hapus Ringkas -->
-                        <a href="data_siswa.php?hapus=<?= $d['nisn']; ?>" class="btn btn-danger btn-sm p-1 px-2" onclick="return confirm('Hapus siswa ini?')" title="Hapus">
-                            <i class="bi bi-trash"></i>
-                        </a>
-                    </td>
-                </tr>
-                <?php } ?>
+                <?php
+                if (!empty($data_siswa)) {
+                    $no = 1;
+                    foreach ($data_siswa as $s) {
+                    ?>
+                    <tr>
+                        <td><?= $no++; ?></td>
+                        <td><?= htmlspecialchars($s['nisn']); ?></td>
+                        <td><?= htmlspecialchars($s['nis']); ?></td>
+                        <td><?= htmlspecialchars($s['nama']); ?></td>
+                        <td><?= htmlspecialchars($s['nama_kelas']); ?></td>
+                        <td><?= htmlspecialchars($s['alamat']); ?></td>
+                        <td><?= htmlspecialchars($s['no_telp']); ?></td>
+                        <td>Rp <?= number_format($s['nominal'], 0, ',', '.'); ?></td>
+                        <td class="text-center text-nowrap">
+                            <button class="btn btn-warning btn-sm p-1 px-2" data-bs-toggle="modal" data-bs-target="#modalEditSiswa<?= $s['nisn']; ?>" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <a href="data_siswa.php?hapus=<?= $s['nisn']; ?>" class="btn btn-danger btn-sm p-1 px-2" onclick="return confirm('Yakin ingin menghapus data siswa ini?')" title="Hapus">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php 
+                    }
+                } else {
+                    echo "<tr><td colspan='9' class='text-center text-muted'>Belum ada data siswa.</td></tr>";
+                }
+                ?>
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- ================= MODAL EDIT SISWA (DI LUAR TABEL) ================= -->
-<?php foreach ($data_siswa as $d) { ?>
-<div class="modal fade" id="modalEditSiswa<?= $d['nisn']; ?>" tabindex="-1" aria-labelledby="labelModalSiswa<?= $d['nisn']; ?>" aria-hidden="true">
+<!-- MODAL TAMBAH SISWA -->
+<div class="modal fade" id="modalTambahSiswa" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form action="data_siswa.php" method="POST" class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="labelModalSiswa<?= $d['nisn']; ?>">Edit Data Siswa</h5>
+        <h5 class="modal-title">Tambah Data Siswa</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-2">
-            <label class="form-label">NISN (Primary Key)</label>
-            <input type="text" name="nisn" class="form-control" value="<?= $d['nisn']; ?>" readonly>
+        <div class="mb-3">
+            <label class="form-label fw-bold">NISN</label>
+            <input type="text" name="nisn" class="form-control" placeholder="Masukkan NISN Unik" required>
         </div>
-        <div class="mb-2">
-            <label class="form-label">NIS</label>
-            <input type="text" name="nis" class="form-control" value="<?= $d['nis']; ?>" required>
+        <div class="mb-3">
+            <label class="form-label fw-bold">NIS</label>
+            <input type="text" name="nis" class="form-control" placeholder="Masukkan NIS Unik" required>
         </div>
-        <div class="mb-2">
-            <label class="form-label">Nama Siswa</label>
-            <input type="text" name="nama" class="form-control" value="<?= $d['nama']; ?>" required>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Nama Siswa</label>
+            <input type="text" name="nama" class="form-control" placeholder="Masukkan Nama Lengkap" required>
         </div>
-        <div class="mb-2">
-            <label class="form-label">Kelas</label>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Kelas</label>
             <select name="id_kelas" class="form-select" required>
-                <?php foreach ($list_kelas as $k) { 
-                    $selected = ($k['id_kelas'] == $d['id_kelas']) ? 'selected' : '';
+                <option value="">-- Pilih Kelas --</option>
+                <?php
+                $q_k = mysqli_query($koneksi, "SELECT * FROM kelas");
+                while ($k = mysqli_fetch_array($q_k)) {
+                    echo "<option value='".$k['id_kelas']."'>".$k['nama_kelas']." (".$k['kompetensi_keahlian'].")</option>";
+                }
                 ?>
-                    <option value="<?= $k['id_kelas']; ?>" <?= $selected; ?>><?= $k['nama_kelas']; ?></option>
-                <?php } ?>
             </select>
         </div>
-        <div class="mb-2">
-            <label class="form-label">SPP</label>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Alamat</label>
+            <textarea name="alamat" class="form-control" rows="2" placeholder="Masukkan Alamat Lengkap"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">No. Telepon</label>
+            <input type="text" name="no_telp" class="form-control" placeholder="Masukkan No HP/Telp">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Tarif SPP</label>
             <select name="id_spp" class="form-select" required>
-                <?php foreach ($list_spp as $s) { 
-                    $selected = ($s['id_spp'] == $d['id_spp']) ? 'selected' : '';
+                <option value="">-- Pilih SPP --</option>
+                <?php
+                $q_s = mysqli_query($koneksi, "SELECT * FROM spp");
+                while ($spp = mysqli_fetch_array($q_s)) {
+                    echo "<option value='".$spp['id_spp']."'>Tahun ".$spp['tahun']." - Rp ".number_format($spp['nominal'], 0, ',', '.')."</option>";
+                }
                 ?>
-                    <option value="<?= $s['id_spp']; ?>" <?= $selected; ?>>
-                        Tahun <?= $s['tahun']; ?> - Rp <?= number_format($s['nominal'], 0, ',', '.'); ?>
-                    </option>
-                <?php } ?>
             </select>
         </div>
-        <div class="mb-2">
-            <label class="form-label">Alamat</label>
-            <textarea name="alamat" class="form-control" required><?= $d['alamat']; ?></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" name="tambah" class="btn btn-primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDIT SISWA -->
+<?php foreach ($data_siswa as $s) { ?>
+<div class="modal fade" id="modalEditSiswa<?= $s['nisn']; ?>" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form action="data_siswa.php" method="POST" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Data Siswa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label fw-bold">NISN (Tidak dapat diubah)</label>
+            <input type="text" name="nisn" class="form-control" value="<?= $s['nisn']; ?>" readonly>
         </div>
-        <div class="mb-2">
-            <label class="form-label">No. Telp</label>
-            <input type="text" name="no_telp" class="form-control" value="<?= $d['no_telp']; ?>" required>
+        <div class="mb-3">
+            <label class="form-label fw-bold">NIS</label>
+            <input type="text" name="nis" class="form-control" value="<?= htmlspecialchars($s['nis']); ?>" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Nama Siswa</label>
+            <input type="text" name="nama" class="form-control" value="<?= htmlspecialchars($s['nama']); ?>" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Kelas</label>
+            <select name="id_kelas" class="form-select" required>
+                <?php
+                $q_k = mysqli_query($koneksi, "SELECT * FROM kelas");
+                while ($k = mysqli_fetch_array($q_k)) {
+                    $selected = ($k['id_kelas'] == $s['id_kelas']) ? 'selected' : '';
+                    echo "<option value='".$k['id_kelas']."' $selected>".$k['nama_kelas']." (".$k['kompetensi_keahlian'].")</option>";
+                }
+                ?>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Alamat</label>
+            <textarea name="alamat" class="form-control" rows="2"><?= htmlspecialchars($s['alamat']); ?></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">No. Telepon</label>
+            <input type="text" name="no_telp" class="form-control" value="<?= htmlspecialchars($s['no_telp']); ?>">
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Tarif SPP</label>
+            <select name="id_spp" class="form-select" required>
+                <?php
+                $q_s = mysqli_query($koneksi, "SELECT * FROM spp");
+                while ($spp = mysqli_fetch_array($q_s)) {
+                    $selected = ($spp['id_spp'] == $s['id_spp']) ? 'selected' : '';
+                    echo "<option value='".$spp['id_spp']."' $selected>Tahun ".$spp['tahun']." - Rp ".number_format($spp['nominal'], 0, ',', '.')."</option>";
+                }
+                ?>
+            </select>
         </div>
       </div>
       <div class="modal-footer">
@@ -191,44 +266,5 @@ while ($row = mysqli_fetch_array($query)) {
   </div>
 </div>
 <?php } ?>
-
-<!-- ================= MODAL TAMBAH SISWA ================= -->
-<div class="modal fade" id="modalTambahSiswa" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form action="data_siswa.php" method="POST" class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Tambah Data Siswa</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2"><label class="form-label">NISN</label><input type="text" name="nisn" class="form-control" required></div>
-        <div class="mb-2"><label class="form-label">NIS</label><input type="text" name="nis" class="form-control" required></div>
-        <div class="mb-2"><label class="form-label">Nama Siswa</label><input type="text" name="nama" class="form-control" required></div>
-        <div class="mb-2">
-            <label class="form-label">Kelas</label>
-            <select name="id_kelas" class="form-select" required>
-                <?php foreach ($list_kelas as $k) { ?>
-                    <option value="<?= $k['id_kelas']; ?>"><?= $k['nama_kelas']; ?></option>
-                <?php } ?>
-            </select>
-        </div>
-        <div class="mb-2">
-            <label class="form-label">SPP</label>
-            <select name="id_spp" class="form-select" required>
-                <?php foreach ($list_spp as $s) { ?>
-                    <option value="<?= $s['id_spp']; ?>">Tahun <?= $s['tahun']; ?> - Rp <?= number_format($s['nominal'], 0, ',', '.'); ?></option>
-                <?php } ?>
-            </select>
-        </div>
-        <div class="mb-2"><label class="form-label">Alamat</label><textarea name="alamat" class="form-control" required></textarea></div>
-        <div class="mb-2"><label class="form-label">No. Telp</label><input type="text" name="no_telp" class="form-control" required></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-        <button type="submit" name="tambah" class="btn btn-primary">Simpan Data</button>
-      </div>
-    </form>
-  </div>
-</div>
 
 <?php include 'footer.php'; ?>

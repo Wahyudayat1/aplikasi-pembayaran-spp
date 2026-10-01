@@ -2,30 +2,42 @@
 include 'header.php'; 
 include 'sidebar.php'; 
 
-// 1. Tambah Kelas
+// 1. Tambah Kelas dengan Validasi Duplikasi Nama Kelas
 if (isset($_POST['tambah'])) {
-    $nama_kelas = $_POST['nama_kelas'];
-    $kompetensi_keahlian = $_POST['kompetensi_keahlian'];
+    $nama_kelas = trim($_POST['nama_kelas']);
+    $kompetensi_keahlian = trim($_POST['kompetensi_keahlian']);
 
-    $query = mysqli_query($koneksi, "INSERT INTO kelas VALUES (NULL, '$nama_kelas', '$kompetensi_keahlian')");
-    if ($query) {
-        echo "<script>alert('Data kelas berhasil ditambahkan!'); location.href='data_kelas.php';</script>";
+    // Validasi apakah nama kelas sudah terdaftar
+    $cek_kelas = mysqli_query($koneksi, "SELECT * FROM kelas WHERE nama_kelas = '$nama_kelas'");
+    if (mysqli_num_rows($cek_kelas) > 0) {
+        echo "<script>alert('Gagal! Nama kelas \"$nama_kelas\" sudah ada di database.'); location.href='data_kelas.php';</script>";
     } else {
-        echo "<script>alert('Gagal menambah data: " . mysqli_error($koneksi) . "');</script>";
+        $query = mysqli_query($koneksi, "INSERT INTO kelas (nama_kelas, kompetensi_keahlian) VALUES ('$nama_kelas', '$kompetensi_keahlian')");
+        if ($query) {
+            echo "<script>alert('Data kelas berhasil ditambahkan!'); location.href='data_kelas.php';</script>";
+        } else {
+            echo "<script>alert('Gagal menambah data: " . mysqli_error($koneksi) . "');</script>";
+        }
     }
 }
 
 // 2. Edit Kelas (Proses UPDATE)
 if (isset($_POST['edit'])) {
     $id_kelas = $_POST['id_kelas'];
-    $nama_kelas = $_POST['nama_kelas'];
-    $kompetensi_keahlian = $_POST['kompetensi_keahlian'];
+    $nama_kelas = trim($_POST['nama_kelas']);
+    $kompetensi_keahlian = trim($_POST['kompetensi_keahlian']);
 
-    $query = mysqli_query($koneksi, "UPDATE kelas SET nama_kelas='$nama_kelas', kompetensi_keahlian='$kompetensi_keahlian' WHERE id_kelas='$id_kelas'");
-    if ($query) {
-        echo "<script>alert('Data kelas berhasil diperbarui!'); location.href='data_kelas.php';</script>";
+    // Cek duplikasi nama kelas untuk ID yang berbeda
+    $cek_kelas = mysqli_query($koneksi, "SELECT * FROM kelas WHERE nama_kelas = '$nama_kelas' AND id_kelas != '$id_kelas'");
+    if (mysqli_num_rows($cek_kelas) > 0) {
+        echo "<script>alert('Gagal! Nama kelas \"$nama_kelas\" sudah digunakan!'); location.href='data_kelas.php';</script>";
     } else {
-        echo "<script>alert('Gagal memperbarui data: " . mysqli_error($koneksi) . "');</script>";
+        $query = mysqli_query($koneksi, "UPDATE kelas SET nama_kelas='$nama_kelas', kompetensi_keahlian='$kompetensi_keahlian' WHERE id_kelas='$id_kelas'");
+        if ($query) {
+            echo "<script>alert('Data kelas berhasil diperbarui!'); location.href='data_kelas.php';</script>";
+        } else {
+            echo "<script>alert('Gagal memperbarui data: " . mysqli_error($koneksi) . "');</script>";
+        }
     }
 }
 
@@ -40,7 +52,7 @@ if (isset($_GET['hapus'])) {
     }
 }
 
-// Ambil seluruh data kelas ke dalam Array
+// Fetch seluruh data kelas
 $data_kelas = [];
 $q = mysqli_query($koneksi, "SELECT * FROM kelas");
 while ($row = mysqli_fetch_array($q)) {
@@ -76,11 +88,9 @@ while ($row = mysqli_fetch_array($q)) {
                     <td><?= $d['nama_kelas']; ?></td>
                     <td><?= $d['kompetensi_keahlian']; ?></td>
                     <td class="text-center text-nowrap">
-                        <!-- Tombol Edit Ringkas -->
                         <button class="btn btn-warning btn-sm p-1 px-2" data-bs-toggle="modal" data-bs-target="#modalEditKelas<?= $d['id_kelas']; ?>" title="Edit">
                             <i class="bi bi-pencil-square"></i>
                         </button>
-                        <!-- Tombol Hapus Ringkas -->
                         <a href="data_kelas.php?hapus=<?= $d['id_kelas']; ?>" class="btn btn-danger btn-sm p-1 px-2" onclick="return confirm('Hapus kelas ini?')" title="Hapus">
                             <i class="bi bi-trash"></i>
                         </a>
@@ -92,19 +102,17 @@ while ($row = mysqli_fetch_array($q)) {
     </div>
 </div>
 
-<!-- ================= MODAL EDIT KELAS (DI LUAR TABEL) ================= -->
+<!-- MODAL EDIT KELAS -->
 <?php foreach ($data_kelas as $d) { ?>
-<div class="modal fade" id="modalEditKelas<?= $d['id_kelas']; ?>" tabindex="-1" aria-labelledby="labelModalKelas<?= $d['id_kelas']; ?>" aria-hidden="true">
+<div class="modal fade" id="modalEditKelas<?= $d['id_kelas']; ?>" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form action="data_kelas.php" method="POST" class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="labelModalKelas<?= $d['id_kelas']; ?>">Edit Data Kelas</h5>
+        <h5 class="modal-title">Edit Data Kelas</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <!-- Hidden input ID Kelas -->
         <input type="hidden" name="id_kelas" value="<?= $d['id_kelas']; ?>">
-        
         <div class="mb-3">
             <label class="form-label">Nama Kelas</label>
             <input type="text" name="nama_kelas" class="form-control" value="<?= $d['nama_kelas']; ?>" required>
@@ -123,7 +131,7 @@ while ($row = mysqli_fetch_array($q)) {
 </div>
 <?php } ?>
 
-<!-- ================= MODAL TAMBAH KELAS ================= -->
+<!-- MODAL TAMBAH KELAS -->
 <div class="modal fade" id="modalTambahKelas" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form action="data_kelas.php" method="POST" class="modal-content">
@@ -134,11 +142,11 @@ while ($row = mysqli_fetch_array($q)) {
       <div class="modal-body">
         <div class="mb-3">
             <label class="form-label">Nama Kelas</label>
-            <input type="text" name="nama_kelas" class="form-control" required>
+            <input type="text" name="nama_kelas" class="form-control" required placeholder="Contoh: XII RPL 1">
         </div>
         <div class="mb-3">
             <label class="form-label">Kompetensi Keahlian</label>
-            <input type="text" name="kompetensi_keahlian" class="form-control" required>
+            <input type="text" name="kompetensi_keahlian" class="form-control" required placeholder="Contoh: Rekayasa Perangkat Lunak">
         </div>
       </div>
       <div class="modal-footer">

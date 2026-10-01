@@ -2,7 +2,7 @@
 include 'header.php'; 
 include 'sidebar.php'; 
 
-// 1. Proses Edit/Update Pembayaran
+// 1. Process Edit/Update Pembayaran
 if (isset($_POST['edit'])) {
     $id_pembayaran = $_POST['id_pembayaran'];
     $tgl_bayar = $_POST['tgl_bayar'];
@@ -24,19 +24,21 @@ if (isset($_POST['edit'])) {
     }
 }
 
-// 2. Proses Hapus Pembayaran
+// 2. Process Hapus Pembayaran (Langsung Hapus dari tabel pembayaran saja)
 if (isset($_GET['hapus'])) {
-    $id = $_GET['hapus'];
+    $id = mysqli_real_escape_string($koneksi, $_GET['hapus']);
     $query = mysqli_query($koneksi, "DELETE FROM pembayaran WHERE id_pembayaran='$id'");
     
     if ($query) {
         echo "<script>alert('Data transaksi berhasil dihapus!'); location.href='detail_pembayaran.php';</script>";
+        exit;
     } else {
-        echo "<script>alert('Gagal menghapus data: " . mysqli_error($koneksi) . "');</script>";
+        echo "<script>alert('Gagal menghapus data: " . mysqli_error($koneksi) . "'); location.href='detail_pembayaran.php';</script>";
+        exit;
     }
 }
 
-// Ambil seluruh data pembayaran ke dalam Array
+// Fetch Data
 $data_pembayaran = [];
 $query = mysqli_query($koneksi, "SELECT p.*, s.nama, pt.nama_petugas FROM pembayaran p 
                                  JOIN siswa s ON p.nisn = s.nisn 
@@ -69,45 +71,48 @@ while ($row = mysqli_fetch_array($query)) {
             </thead>
             <tbody>
                 <?php
-                $no = 1;
-                foreach ($data_pembayaran as $d) {
+                if (!empty($data_pembayaran)) {
+                    $no = 1;
+                    foreach ($data_pembayaran as $d) {
+                    ?>
+                    <tr>
+                        <td><?= $no++; ?></td>
+                        <td><?= $d['nisn']; ?></td>
+                        <td><?= $d['nama']; ?></td>
+                        <td><?= $d['tgl_bayar']; ?></td>
+                        <td><?= $d['bulan_dibayar'] . " " . $d['tahun_dibayar']; ?></td>
+                        <td>Rp <?= number_format($d['jumlah_bayar'], 0, ',', '.'); ?></td>
+                        <td><?= $d['nama_petugas']; ?></td>
+                        <td class="text-center text-nowrap">
+                            <button class="btn btn-warning btn-sm p-1 px-2" data-bs-toggle="modal" data-bs-target="#modalEditPembayaran<?= $d['id_pembayaran']; ?>" title="Edit">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <a href="detail_pembayaran.php?hapus=<?= $d['id_pembayaran']; ?>" class="btn btn-danger btn-sm p-1 px-2" onclick="return confirm('Hapus transaksi ini?')" title="Hapus">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php 
+                    }
+                } else {
+                    echo "<tr><td colspan='8' class='text-center text-muted'>Belum ada data pembayaran.</td></tr>";
+                }
                 ?>
-                <tr>
-                    <td><?= $no++; ?></td>
-                    <td><?= $d['nisn']; ?></td>
-                    <td><?= $d['nama']; ?></td>
-                    <td><?= $d['tgl_bayar']; ?></td>
-                    <td><?= $d['bulan_dibayar'] . " " . $d['tahun_dibayar']; ?></td>
-                    <td>Rp <?= number_format($d['jumlah_bayar'], 0, ',', '.'); ?></td>
-                    <td><?= $d['nama_petugas']; ?></td>
-                    <td class="text-center text-nowrap">
-                        <!-- Tombol Edit Ringkas -->
-                        <button class="btn btn-warning btn-sm p-1 px-2" data-bs-toggle="modal" data-bs-target="#modalEditPembayaran<?= $d['id_pembayaran']; ?>" title="Edit">
-                            <i class="bi bi-pencil-square"></i>
-                        </button>
-                        <!-- Tombol Hapus Ringkas -->
-                        <a href="detail_pembayaran.php?hapus=<?= $d['id_pembayaran']; ?>" class="btn btn-danger btn-sm p-1 px-2" onclick="return confirm('Hapus transaksi ini?')" title="Hapus">
-                            <i class="bi bi-trash"></i>
-                        </a>
-                    </td>
-                </tr>
-                <?php } ?>
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- ================= MODAL EDIT PEMBAYARAN (DI LUAR TABEL) ================= -->
+<!-- MODAL EDIT PEMBAYARAN -->
 <?php foreach ($data_pembayaran as $d) { ?>
-<div class="modal fade" id="modalEditPembayaran<?= $d['id_pembayaran']; ?>" tabindex="-1" aria-labelledby="labelModalPembayaran<?= $d['id_pembayaran']; ?>" aria-hidden="true">
+<div class="modal fade" id="modalEditPembayaran<?= $d['id_pembayaran']; ?>" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form action="detail_pembayaran.php" method="POST" class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="labelModalPembayaran<?= $d['id_pembayaran']; ?>">Edit Transaksi Pembayaran</h5>
+        <h5 class="modal-title">Edit Transaksi Pembayaran</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <!-- Hidden input untuk ID Pembayaran -->
         <input type="hidden" name="id_pembayaran" value="<?= $d['id_pembayaran']; ?>">
         
         <div class="mb-3">

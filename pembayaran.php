@@ -2,6 +2,9 @@
 include 'header.php'; 
 include 'sidebar.php'; 
 
+// Ambil NISN dari URL jika dikirim dari halaman cek_pembayaran.php
+$nisn_pilihan = isset($_GET['nisn']) ? htmlspecialchars($_GET['nisn']) : '';
+
 if (isset($_POST['bayar'])) {
     $id_petugas = $_POST['id_petugas'];
     $nisn = $_POST['nisn'];
@@ -11,12 +14,25 @@ if (isset($_POST['bayar'])) {
     $id_spp = $_POST['id_spp'];
     $jumlah_bayar = $_POST['jumlah_bayar'];
 
-    $simpan = mysqli_query($koneksi, "INSERT INTO pembayaran VALUES (NULL, '$id_petugas', '$nisn', '$tgl_bayar', '$bulan_dibayar', '$tahun_dibayar', '$id_spp', '$jumlah_bayar')");
-    
-    if ($simpan) {
-        $id_baru = mysqli_insert_id($koneksi);
-        mysqli_query($koneksi, "INSERT INTO cek_pembayaran (id_pembayaran, status_verifikasi) VALUES ('$id_baru', 'Lunas')");
-        echo "<script>alert('Transaksi Pembayaran Berhasil Ditambahkan!'); location.href='pembayaran.php';</script>";
+    if (empty($id_petugas) || empty($nisn) || empty($jumlah_bayar)) {
+        echo "<script>alert('Gagal! Harap lengkapi seluruh form.'); location.href='pembayaran.php';</script>";
+    } else {
+        // --- VALIDASI CEK DUPLIKAT PEMBAYARAN ---
+        $cek_duplikat = mysqli_query($koneksi, "SELECT * FROM pembayaran WHERE nisn = '$nisn' AND bulan_dibayar = '$bulan_dibayar' AND tahun_dibayar = '$tahun_dibayar'");
+        
+        if (mysqli_num_rows($cek_duplikat) > 0) {
+            // Jika sudah pernah bayar pada bulan dan tahun yang sama
+            echo "<script>alert('Gagal! Siswa dengan NISN $nisn SUDAH MEMBAYAR SPP untuk bulan $bulan_dibayar $tahun_dibayar.'); window.history.back();</script>";
+        } else {
+            // Jika belum bayar, proses simpan transaksi
+            $simpan = mysqli_query($koneksi, "INSERT INTO pembayaran VALUES (NULL, '$id_petugas', '$nisn', '$tgl_bayar', '$bulan_dibayar', '$tahun_dibayar', '$id_spp', '$jumlah_bayar')");
+            
+            if ($simpan) {
+                echo "<script>alert('Transaksi Pembayaran Berhasil Ditambahkan!'); location.href='detail_pembayaran.php';</script>";
+            } else {
+                echo "<script>alert('Gagal menyimpan transaksi: " . mysqli_error($koneksi) . "');</script>";
+            }
+        }
     }
 }
 ?>
@@ -24,16 +40,17 @@ if (isset($_POST['bayar'])) {
 <div class="col-md-10 p-4">
     <h4>Transaksi Pembayaran SPP</h4>
     <div class="card p-4 shadow-sm border-0 bg-white mt-3">
-        <form method="POST">
+        <form method="POST" action="pembayaran.php">
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label fw-bold">Pilih Siswa</label>
                     <select name="nisn" class="form-select" required>
                         <option value="">-- Pilih Siswa --</option>
                         <?php
-                        $q_siswa = mysqli_query($koneksi, "SELECT * FROM siswa");
+                        $q_siswa = mysqli_query($koneksi, "SELECT * FROM siswa ORDER BY nama ASC");
                         while ($s = mysqli_fetch_array($q_siswa)) {
-                            echo "<option value='".$s['nisn']."'>".$s['nisn']." - ".$s['nama']."</option>";
+                            $selected = ($s['nisn'] == $nisn_pilihan) ? 'selected' : '';
+                            echo "<option value='".$s['nisn']."' $selected>".$s['nisn']." - ".$s['nama']."</option>";
                         }
                         ?>
                     </select>
@@ -41,6 +58,7 @@ if (isset($_POST['bayar'])) {
                 <div class="col-md-6 mb-3">
                     <label class="form-label fw-bold">Petugas Kasir</label>
                     <select name="id_petugas" class="form-select" required>
+                        <option value="">-- Pilih Petugas --</option>
                         <?php
                         $q_petugas = mysqli_query($koneksi, "SELECT * FROM petugas");
                         while ($p = mysqli_fetch_array($q_petugas)) {
@@ -56,18 +74,12 @@ if (isset($_POST['bayar'])) {
                 <div class="col-md-4 mb-3">
                     <label class="form-label fw-bold">Bulan Dibayar</label>
                     <select name="bulan_dibayar" class="form-select" required>
-                        <option value="Januari">Januari</option>
-                        <option value="Februari">Februari</option>
-                        <option value="Maret">Maret</option>
-                        <option value="April">April</option>
-                        <option value="Mei">Mei</option>
-                        <option value="Juni">Juni</option>
-                        <option value="Juli">Juli</option>
-                        <option value="Agustus">Agustus</option>
-                        <option value="September">September</option>
-                        <option value="Oktober">Oktober</option>
-                        <option value="November">November</option>
-                        <option value="Desember">Desember</option>
+                        <?php 
+                        $bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                        foreach ($bulan as $b) {
+                            echo "<option value='$b'>$b</option>";
+                        }
+                        ?>
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
